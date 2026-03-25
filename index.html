@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlanniPro — Maîtrisez votre temps</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23ff6b35'/><text x='4' y='24' font-size='22' fill='white'>⚡</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #0a0a0f;
+      --bg2:      #111118;
+      --surface:  #16161f;
+      --border:   #2a2a3a;
+      --text:     #f0f0f8;
+      --muted:    #6b6b8a;
+      --accent:   #ff6b35;
+      --accent2:  #7c5cfc;
+      --accent3:  #00d4aa;
+      --gold:     #f5c842;
+      --font-h:   'Syne', sans-serif;
+      --font-s:   'Instrument Serif', serif;
+      --font-m:   'JetBrains Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-h);
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* ── Curseur custom ─────────────────────────── */
+    .cursor {
+      position: fixed; width: 12px; height: 12px;
+      background: var(--accent); border-radius: 50%;
+      pointer-events: none; z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: transform .1s, background .2s;
+      mix-blend-mode: difference;
+    }
+    .cursor-trail {
+      position: fixed; width: 32px; height: 32px;
+      border: 1.5px solid var(--accent2); border-radius: 50%;
+      pointer-events: none; z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: left .12s ease, top .12s ease, transform .2s;
+      opacity: .5;
+    }
+    body:hover .cursor { transform: translate(-50%, -50%) scale(1); }
+
+    /* ── Canvas background ──────────────────────── */
+    #canvas-bg {
+      position: fixed; inset: 0; z-index: 0; opacity: .35;
+    }
+
+    /* ── Nav ─────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 48px;
+      background: linear-gradient(to bottom, rgba(10,10,15,.95) 0%, transparent 100%);
+      backdrop-filter: blur(2px);
+    }
+    .nav-logo {
+      font-size: 1.5rem; font-weight: 800; letter-spacing: -.03em;
+      color: var(--text);
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; align-items: center; gap: 32px; }
+    .nav-links a {
+      color: var(--muted); font-size: .875rem; font-weight: 600;
+      letter-spacing: .04em; text-transform: uppercase;
+      text-decoration: none; transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .btn-outline {
+      padding: 10px 22px; border: 1.5px solid var(--border);
+      border-radius: 100px; font-size: .875rem; font-weight: 600;
+      color: var(--text); text-decoration: none;
+      transition: all .2s; font-family: var(--font-h);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-cta {
+      padding: 10px 24px; background: var(--accent);
+      border-radius: 100px; font-size: .875rem; font-weight: 700;
+      color: #fff; text-decoration: none;
+      transition: all .2s; font-family: var(--font-h);
+      box-shadow: 0 0 24px rgba(255,107,53,.3);
+    }
+    .btn-cta:hover { background: #ff8254; transform: translateY(-1px); box-shadow: 0 4px 32px rgba(255,107,53,.5); }
+
+    /* ── Hero ────────────────────────────────────── */
+    .hero {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 120px 24px 80px;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(124,92,252,.12); border: 1px solid rgba(124,92,252,.3);
+      border-radius: 100px; padding: 6px 16px;
+      font-size: .75rem; font-weight: 600; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--accent2);
+      margin-bottom: 36px;
+      animation: fadeUp .8s ease both;
+    }
+    .hero-badge::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent2); animation: pulse 2s infinite;
+    }
+
+    .hero-title {
+      font-size: clamp(3.5rem, 10vw, 8rem);
+      font-weight: 800; line-height: .92;
+      letter-spacing: -.04em; margin-bottom: 12px;
+      animation: fadeUp .8s .1s ease both;
+    }
+    .hero-title .line1 { display: block; color: var(--text); }
+    .hero-title .line2 {
+      display: block;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--gold) 50%, var(--accent2) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-title .line3 {
+      display: block; font-family: var(--font-s); font-style: italic;
+      font-weight: 400; color: var(--muted); font-size: .55em; margin-top: 8px;
+    }
+
+    .hero-sub {
+      max-width: 580px; font-size: 1.125rem; color: var(--muted);
+      line-height: 1.7; font-weight: 400;
+      margin: 28px auto 48px;
+      animation: fadeUp .8s .2s ease both;
+    }
+    .hero-sub strong { color: var(--text); font-weight: 600; }
+
+    .hero-actions {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: center;
+      animation: fadeUp .8s .3s ease both;
+    }
+    .btn-hero-primary {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 16px 36px; background: var(--accent);
+      border-radius: 100px; font-size: 1rem; font-weight: 700;
+      color: #fff; text-decoration: none; font-family: var(--font-h);
+      box-shadow: 0 0 48px rgba(255,107,53,.4);
+      transition: all .25s;
+    }
+    .btn-hero-primary:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 8px 48px rgba(255,107,53,.6); }
+    .btn-hero-primary svg { transition: transform .2s; }
+    .btn-hero-primary:hover svg { transform: translateX(4px); }
+
+    .btn-hero-sec {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 16px 32px; border: 1.5px solid var(--border);
+      border-radius: 100px; font-size: 1rem; font-weight: 600;
+      color: var(--text); text-decoration: none; font-family: var(--font-h);
+      transition: all .25s;
+    }
+    .btn-hero-sec:hover { border-color: var(--accent2); color: var(--accent2); }
+
+    .hero-stats {
+      display: flex; align-items: center; gap: 48px;
+      margin-top: 72px;
+      animation: fadeUp .8s .45s ease both;
+    }
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-size: 2rem; font-weight: 800; letter-spacing: -.04em;
+      background: linear-gradient(135deg, var(--text), var(--muted));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .stat-label { font-size: .75rem; color: var(--muted); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
+    .stat-divider { width: 1px; height: 40px; background: var(--border); }
+
+    /* ── Floating calendar preview ──────────────── */
+    .hero-preview {
+      position: relative; margin-top: 80px; width: 100%; max-width: 900px;
+      animation: fadeUp .8s .4s ease both;
+    }
+    .preview-glow {
+      position: absolute; inset: -60px;
+      background: radial-gradient(ellipse at 50% 100%, rgba(255,107,53,.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .preview-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px; overflow: hidden;
+      box-shadow: 0 40px 120px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);
+      position: relative;
+    }
+    .preview-topbar {
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      padding: 14px 20px; display: flex; align-items: center; gap: 12px;
+    }
+    .preview-dots { display: flex; gap: 6px; }
+    .preview-dots span {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+    .preview-dots span:nth-child(1) { background: #ff5f57; }
+    .preview-dots span:nth-child(2) { background: #febc2e; }
+    .preview-dots span:nth-child(3) { background: #28c840; }
+    .preview-url {
+      flex: 1; background: rgba(255,255,255,.05); border-radius: 6px;
+      padding: 5px 12px; font-family: var(--font-m); font-size: .7rem;
+      color: var(--muted); text-align: center;
+    }
+    .preview-body {
+      display: grid; grid-template-columns: 200px 1fr;
+      height: 340px; overflow: hidden;
+    }
+    .preview-sidebar {
+      background: var(--bg); border-right: 1px solid var(--border);
+      padding: 16px 12px;
+    }
+    .preview-sidebar-logo { font-size: .9rem; font-weight: 800; margin-bottom: 16px; padding: 0 6px; }
+    .preview-sidebar-logo span { color: var(--accent); }
+    .psb-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; border-radius: 8px; margin-bottom: 2px;
+      font-size: .72rem; font-weight: 600; color: var(--muted);
+    }
+    .psb-item.active { background: var(--accent); color: #fff; }
+    .psb-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .preview-mini-cal {
+      margin-top: 16px; padding: 0 6px;
+    }
+    .pmc-header { font-size: .65rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .08em; }
+    .pmc-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .pmc-cell {
+      width: 20px; height: 20px; border-radius: 4px;
+      font-size: .58rem; display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-weight: 500;
+    }
+    .pmc-cell.today { background: var(--accent); color: #fff; font-weight: 700; }
+    .pmc-cell.has-ev { color: var(--accent2); font-weight: 700; }
+    .preview-main { padding: 0; }
+    .preview-cal-header {
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .pch-title { font-size: .85rem; font-weight: 700; }
+    .pch-views { display: flex; gap: 4px; }
+    .pch-v {
+      padding: 4px 10px; border-radius: 6px; font-size: .65rem;
+      font-weight: 600; color: var(--muted);
+    }
+    .pch-v.active { background: rgba(255,107,53,.15); color: var(--accent); }
+    .preview-week {
+      display: grid; grid-template-columns: 40px repeat(7, 1fr);
+      height: 280px; overflow: hidden;
+    }
+    .pw-time { border-right: 1px solid var(--border); }
+    .pw-time-slot {
+      height: 40px; border-bottom: 1px solid rgba(255,255,255,.04);
+      display: flex; align-items: flex-start; justify-content: flex-end;
+      padding: 3px 6px; font-size: .55rem; color: rgba(255,255,255,.2);
+      font-family: var(--font-m);
+    }
+    .pw-col { border-right: 1px solid rgba(255,255,255,.04); position: relative; }
+    .pw-col:last-child { border-right: none; }
+    .pw-slot { height: 40px; border-bottom: 1px solid rgba(255,255,255,.04); }
+    .pw-event {
+      position: absolute; left: 3px; right: 3px; border-radius: 5px;
+      padding: 3px 5px; font-size: .58rem; font-weight: 600; overflow: hidden;
+      border-left: 2px solid rgba(0,0,0,.2); color: #fff;
+    }
+
+    /* ── Features section ────────────────────────── */
+    .section {
+      position: relative; z-index: 1;
+      padding: 120px 24px;
+    }
+    .section-label {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: .75rem; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .section-label::before { content: ''; width: 24px; height: 1.5px; background: var(--accent); }
+    .section-title {
+      font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 800;
+      letter-spacing: -.04em; line-height: 1.05; margin-bottom: 20px;
+    }
+    .section-title em { font-family: var(--font-s); font-style: italic; font-weight: 400; color: var(--muted); }
+    .section-sub { color: var(--muted); font-size: 1.05rem; max-width: 500px; line-height: 1.7; }
+
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 2px; margin-top: 64px;
+      background: var(--border); border-radius: 20px; overflow: hidden;
+    }
+    .feat-card {
+      background: var(--bg); padding: 40px 36px;
+      transition: background .25s;
+      position: relative; overflow: hidden;
+    }
+    .feat-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 0% 0%, rgba(255,107,53,.06) 0%, transparent 60%);
+      opacity: 0; transition: opacity .3s;
+    }
+    .feat-card:hover { background: var(--surface); }
+    .feat-card:hover::before { opacity: 1; }
+    .feat-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; margin-bottom: 24px;
+      border: 1px solid var(--border);
+    }
+    .feat-icon.orange { background: rgba(255,107,53,.1); border-color: rgba(255,107,53,.2); }
+    .feat-icon.purple { background: rgba(124,92,252,.1); border-color: rgba(124,92,252,.2); }
+    .feat-icon.teal   { background: rgba(0,212,170,.1);  border-color: rgba(0,212,170,.2); }
+    .feat-icon.gold   { background: rgba(245,200,66,.1); border-color: rgba(245,200,66,.2); }
+    .feat-icon.pink   { background: rgba(255,90,140,.1); border-color: rgba(255,90,140,.2); }
+    .feat-icon.blue   { background: rgba(66,153,225,.1); border-color: rgba(66,153,225,.2); }
+    .feat-title { font-size: 1.125rem; font-weight: 700; margin-bottom: 10px; letter-spacing: -.02em; }
+    .feat-desc { font-size: .9rem; color: var(--muted); line-height: 1.65; font-weight: 400; }
+
+    /* ── Views showcase ──────────────────────────── */
+    .views-section {
+      position: relative; z-index: 1;
+      padding: 80px 24px 120px; max-width: 1200px; margin: 0 auto;
+    }
+    .views-tabs {
+      display: flex; gap: 8px; margin-bottom: 32px; flex-wrap: wrap;
+    }
+    .view-tab-btn {
+      padding: 10px 20px; border-radius: 100px;
+      border: 1.5px solid var(--border); background: none;
+      color: var(--muted); font-size: .875rem; font-weight: 600;
+      cursor: pointer; transition: all .2s; font-family: var(--font-h);
+    }
+    .view-tab-btn.active {
+      background: var(--accent); border-color: var(--accent);
+      color: #fff; box-shadow: 0 0 20px rgba(255,107,53,.3);
+    }
+    .view-tab-btn:hover:not(.active) { border-color: var(--text); color: var(--text); }
+    .views-content { position: relative; }
+    .view-panel {
+      display: none; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 20px;
+      overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,.4);
+    }
+    .view-panel.active { display: block; animation: fadeIn .3s ease; }
+    .view-panel-header {
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      padding: 16px 24px; display: flex; align-items: center; gap: 16px;
+    }
+    .vph-badge {
+      padding: 4px 12px; border-radius: 100px;
+      font-size: .75rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .vph-badge.orange { background: rgba(255,107,53,.15); color: var(--accent); }
+    .vph-badge.purple { background: rgba(124,92,252,.15); color: var(--accent2); }
+    .vph-badge.teal   { background: rgba(0,212,170,.15);  color: var(--accent3); }
+    .view-panel-title { font-size: 1rem; font-weight: 700; }
+    .view-panel-desc { font-size: .85rem; color: var(--muted); margin-left: auto; }
+    .view-panel-body { padding: 32px; }
+
+    /* Mini calendar grids for showcase */
+    .showcase-week {
+      display: grid; grid-template-columns: 50px repeat(7, 1fr); gap: 0;
+      border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    }
+    .sw-header { background: var(--bg2); }
+    .sw-day-header {
+      padding: 10px 8px; text-align: center; font-size: .7rem;
+      font-weight: 600; color: var(--muted); border-left: 1px solid var(--border);
+      letter-spacing: .04em;
+    }
+    .sw-day-header.today { color: var(--accent); font-weight: 700; }
+    .sw-time { height: 48px; border-right: 1px solid var(--border); border-bottom: 1px solid rgba(255,255,255,.04); display: flex; align-items: flex-start; justify-content: flex-end; padding: 4px 8px; font-size: .6rem; color: var(--muted); font-family: var(--font-m); }
+    .sw-cell { height: 48px; border-left: 1px solid rgba(255,255,255,.05); border-bottom: 1px solid rgba(255,255,255,.04); position: relative; cursor: pointer; transition: background .15s; }
+    .sw-cell:hover { background: rgba(255,107,53,.05); }
+    .sw-ev {
+      position: absolute; left: 3px; right: 3px; border-radius: 4px;
+      padding: 2px 6px; font-size: .6rem; font-weight: 600; color: #fff; overflow: hidden; white-space: nowrap;
+      border-left: 2px solid rgba(0,0,0,.2);
+    }
+
+    /* ── CTA section ─────────────────────────────── */
+    .cta-section {
+      position: relative; z-index: 1;
+      padding: 120px 24px; text-align: center;
+    }
+    .cta-box {
+      max-width: 800px; margin: 0 auto;
+      background: linear-gradient(135deg, rgba(255,107,53,.08) 0%, rgba(124,92,252,.08) 100%);
+      border: 1px solid rgba(255,107,53,.2); border-radius: 32px;
+      padding: 80px 60px; position: relative; overflow: hidden;
+    }
+    .cta-box::before {
+      content: ''; position: absolute; top: -100px; left: 50%;
+      transform: translateX(-50%);
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(255,107,53,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-title {
+      font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800;
+      letter-spacing: -.04em; line-height: 1.1; margin-bottom: 20px;
+    }
+    .cta-sub { font-size: 1.1rem; color: var(--muted); margin-bottom: 48px; line-height: 1.6; }
+    .cta-actions { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+
+    /* ── Footer ──────────────────────────────────── */
+    footer {
+      position: relative; z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 40px 48px; display: flex;
+      align-items: center; justify-content: space-between;
+    }
+    .footer-logo { font-size: 1.1rem; font-weight: 800; }
+    .footer-logo span { color: var(--accent); }
+    .footer-copy { font-size: .8rem; color: var(--muted); }
+
+    /* ── Animations ──────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+    @keyframes float {
+      0%,100% { transform: translateY(0px); }
+      50%     { transform: translateY(-12px); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .float { animation: float 6s ease-in-out infinite; }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0; transform: translateY(30px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ── Responsive ──────────────────────────────── */
+    @media (max-width: 900px) {
+      nav { padding: 16px 20px; }
+      .nav-links { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .hero-stats { gap: 24px; }
+      .cta-box { padding: 48px 24px; }
+      footer { flex-direction: column; gap: 12px; text-align: center; }
+      .preview-body { grid-template-columns: 1fr; }
+      .preview-sidebar { display: none; }
+    }
+    @media (max-width: 600px) {
+      .hero-title { font-size: 3rem; }
+      .section-title { font-size: 2rem; }
+      .hero-stats { flex-wrap: wrap; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Curseur custom -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-trail" id="cursor-trail"></div>
+
+<!-- Canvas animé -->
+<canvas id="canvas-bg"></canvas>
+
+<!-- ── Navigation ──────────────────────────────── -->
+<nav>
+  <div class="nav-logo">Planni<span>Pro</span></div>
+  <div class="nav-links">
+    <a href="#features">Fonctionnalités</a>
+    <a href="#vues">Vues</a>
+    <a href="#cta">Tarifs</a>
+  </div>
+  <div class="nav-cta">
+    <a href="app.html" class="btn-outline">Connexion</a>
+    <a href="app.html" class="btn-cta">Commencer gratuitement</a>
+  </div>
+</nav>
+
+<!-- ── Hero ────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-badge">⚡ Votre emploi du temps réinventé</div>
+
+  <h1 class="hero-title">
+    <span class="line1">Planifiez</span>
+    <span class="line2">Sans Limites</span>
+    <span class="line3">semaine · mois · année — tout sous contrôle</span>
+  </h1>
+
+  <p class="hero-sub">
+    PlanniPro transforme la gestion de votre temps en une <strong>expérience fluide et puissante</strong>.
+    Créez, organisez, récurrencez — et visualisez chaque instant de votre vie avec précision.
+  </p>
+
+  <div class="hero-actions">
+    <a href="app.html" class="btn-hero-primary">
+      Démarrer maintenant
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+    <a href="#features" class="btn-hero-sec">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><path d="M10 15l5-3-5-3v6z" fill="currentColor" stroke="none"/>
+      </svg>
+      Voir la démo
+    </a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat-item">
+      <div class="stat-num">3</div>
+      <div class="stat-label">Vues calendrier</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-num">∞</div>
+      <div class="stat-label">Événements</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-num">5</div>
+      <div class="stat-label">Récurrences</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-num">100%</div>
+      <div class="stat-label">Gratuit</div>
+    </div>
+  </div>
+
+  <!-- Preview app -->
+  <div class="hero-preview float">
+    <div class="preview-glow"></div>
+    <div class="preview-card">
+      <div class="preview-topbar">
+        <div class="preview-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="preview-url">localhost/emploi-du-temps/</div>
+      </div>
+      <div class="preview-body">
+        <div class="preview-sidebar">
+          <div class="preview-sidebar-logo">Planni<span>Pro</span></div>
+          <div class="psb-item active"><span class="psb-dot"></span> Vue semaine</div>
+          <div class="psb-item"><span class="psb-dot"></span> Vue mois</div>
+          <div class="psb-item"><span class="psb-dot"></span> Vue année</div>
+          <div class="preview-mini-cal">
+            <div class="pmc-header">Mars 2026</div>
+            <div class="pmc-grid" id="pmc-grid"></div>
+          </div>
+        </div>
+        <div class="preview-main">
+          <div class="preview-cal-header">
+            <span class="pch-title">17 – 23 Mars 2026</span>
+            <div class="pch-views">
+              <span class="pch-v active">Semaine</span>
+              <span class="pch-v">Mois</span>
+              <span class="pch-v">Année</span>
+            </div>
+          </div>
+          <div class="preview-week" id="preview-week"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Features ────────────────────────────────── -->
+<section class="section" id="features" style="max-width:1200px;margin:0 auto;">
+  <div class="reveal">
+    <div class="section-label">Fonctionnalités</div>
+    <h2 class="section-title">Tout ce dont vous avez <em>besoin</em></h2>
+    <p class="section-sub">Un outil complet pour les professionnels, étudiants, et toute personne qui prend son temps au sérieux.</p>
+  </div>
+
+  <div class="features-grid reveal">
+    <div class="feat-card">
+      <div class="feat-icon orange">📅</div>
+      <div class="feat-title">3 vues puissantes</div>
+      <div class="feat-desc">Naviguez entre la vue semaine avec grille horaire, la vue mois et la vue année. Chaque vue offre un niveau de détail adapté.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon purple">🔄</div>
+      <div class="feat-title">Récurrences avancées</div>
+      <div class="feat-desc">Créez des événements répétitifs — quotidien, hebdomadaire, mensuel ou annuel — avec une date de fin optionnelle.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon teal">🎨</div>
+      <div class="feat-title">Couleurs & catégories</div>
+      <div class="feat-desc">Organisez vos événements par catégorie avec des couleurs personnalisées. Un coup d'œil suffit pour tout comprendre.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon gold">⚡</div>
+      <div class="feat-title">Contrôle total</div>
+      <div class="feat-desc">Créez, modifiez, dupliquez et supprimez vos événements en quelques clics. Chaque action est instantanée.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon pink">🔐</div>
+      <div class="feat-title">Compte sécurisé</div>
+      <div class="feat-desc">Vos données sont protégées avec un hash bcrypt et des sessions sécurisées. Votre planning reste privé.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon blue">📱</div>
+      <div class="feat-title">100% Responsive</div>
+      <div class="feat-desc">Accédez à votre emploi du temps depuis n'importe quel appareil — ordinateur, tablette ou smartphone.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Views showcase ──────────────────────────── -->
+<section class="views-section" id="vues">
+  <div class="reveal">
+    <div class="section-label">Vues calendrier</div>
+    <h2 class="section-title">Votre temps, <em>votre perspective</em></h2>
+  </div>
+  <div class="views-tabs reveal" style="margin-top:40px;">
+    <button class="view-tab-btn active" data-panel="week">📅 Vue Semaine</button>
+    <button class="view-tab-btn" data-panel="month">📆 Vue Mois</button>
+    <button class="view-tab-btn" data-panel="year">🗓 Vue Année</button>
+  </div>
+  <div class="views-content reveal">
+
+    <!-- Semaine -->
+    <div class="view-panel active" id="panel-week">
+      <div class="view-panel-header">
+        <span class="vph-badge orange">Semaine</span>
+        <span class="view-panel-title">Vue horaire détaillée</span>
+        <span class="view-panel-desc">Cliquez sur un créneau pour créer un événement</span>
+      </div>
+      <div class="view-panel-body">
+        <div class="showcase-week" id="showcase-week-grid"></div>
+      </div>
+    </div>
+
+    <!-- Mois -->
+    <div class="view-panel" id="panel-month">
+      <div class="view-panel-header">
+        <span class="vph-badge purple">Mois</span>
+        <span class="view-panel-title">Vue mensuelle complète</span>
+        <span class="view-panel-desc">Tous vos événements du mois en un coup d'œil</span>
+      </div>
+      <div class="view-panel-body">
+        <div id="showcase-month-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;background:var(--border);border-radius:12px;overflow:hidden;"></div>
+      </div>
+    </div>
+
+    <!-- Année -->
+    <div class="view-panel" id="panel-year">
+      <div class="view-panel-header">
+        <span class="vph-badge teal">Année</span>
+        <span class="view-panel-title">Vue annuelle panoramique</span>
+        <span class="view-panel-desc">Planifiez vos 12 mois d'un seul regard</span>
+      </div>
+      <div class="view-panel-body">
+        <div id="showcase-year-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ─────────────────────────────────────── -->
+<section class="cta-section" id="cta">
+  <div class="cta-box reveal">
+    <h2 class="cta-title">Prêt à reprendre<br>le contrôle de votre temps ?</h2>
+    <p class="cta-sub">Créez votre compte gratuitement et commencez à organiser<br>votre emploi du temps en moins de 2 minutes.</p>
+    <div class="cta-actions">
+      <a href="app.html" class="btn-hero-primary">
+        Créer mon compte gratuitement
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+      <a href="app.html" class="btn-hero-sec">Se connecter</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ──────────────────────────────────── -->
+<footer>
+  <div class="footer-logo">Planni<span>Pro</span></div>
+  <div class="footer-copy">© 2026 PlanniPro. Fait avec ❤️ pour votre productivité.</div>
+</footer>
+
+<script>
+// ── Curseur ──────────────────────────────────────
+const cursor = document.getElementById('cursor');
+const trail  = document.getElementById('cursor-trail');
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top  = e.clientY + 'px';
+  trail.style.left  = e.clientX + 'px';
+  trail.style.top   = e.clientY + 'px';
+});
+document.querySelectorAll('a,button').forEach(el => {
+  el.addEventListener('mouseenter', () => { cursor.style.transform = 'translate(-50%,-50%) scale(2)'; });
+  el.addEventListener('mouseleave', () => { cursor.style.transform = 'translate(-50%,-50%) scale(1)'; });
+});
+
+// ── Canvas particules ────────────────────────────
+const canvas = document.getElementById('canvas-bg');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [];
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.r = Math.random() * 1.5 + .3;
+    this.vx = (Math.random() - .5) * .3;
+    this.vy = (Math.random() - .5) * .3;
+    this.alpha = Math.random() * .4 + .1;
+    this.color = Math.random() > .6 ? '#ff6b35' : Math.random() > .5 ? '#7c5cfc' : '#ffffff';
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+  }
+  draw() {
+    ctx.globalAlpha = this.alpha;
+    ctx.fillStyle = this.color;
+    ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+for (let i = 0; i < 120; i++) particles.push(new Particle());
+
+// Lignes de connexion
+function drawLines() {
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i+1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const d  = Math.sqrt(dx*dx + dy*dy);
+      if (d < 100) {
+        ctx.globalAlpha = (1 - d/100) * .08;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = .5;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function animate() {
+  ctx.clearRect(0, 0, W, H);
+  particles.forEach(p => { p.update(); p.draw(); });
+  drawLines();
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(animate);
+}
+animate();
+
+// ── Scroll reveal ────────────────────────────────
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+}, { threshold: .1 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+// ── View tabs ────────────────────────────────────
+document.querySelectorAll('.view-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.view-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+  });
+});
+
+// ── Mini calendrier sidebar preview ─────────────
+(function buildMiniCal() {
+  const grid = document.getElementById('pmc-grid');
+  if (!grid) return;
+  const days = ['L','M','M','J','V','S','D'];
+  days.forEach(d => { const el = document.createElement('div'); el.className = 'pmc-cell'; el.style.cssText = 'color:#6b6b8a;font-size:.55rem;display:flex;align-items:center;justify-content:center;'; el.textContent = d; grid.appendChild(el); });
+  const hasEv = [17,18,19,21,23];
+  for (let d = 1; d <= 31; d++) {
+    const el = document.createElement('div');
+    el.className = 'pmc-cell' + (d===19?' today':'') + (hasEv.includes(d)?' has-ev':'');
+    el.textContent = d;
+    grid.appendChild(el);
+  }
+})();
+
+// ── Preview semaine ──────────────────────────────
+(function buildPreviewWeek() {
+  const wrap = document.getElementById('preview-week');
+  if (!wrap) return;
+  const jours = ['L17','M18','M19','J20','V21','S22','D23'];
+  const timeCol = document.createElement('div'); timeCol.className = 'pw-time';
+  for (let h = 7; h <= 13; h++) {
+    const s = document.createElement('div'); s.className = 'pw-time-slot';
+    s.textContent = h + ':00'; timeCol.appendChild(s);
+  }
+  wrap.appendChild(timeCol);
+
+  const events = [
+    { col:0, top:0, h:1, color:'#ff6b35', title:'Stand-up' },
+    { col:1, top:1, h:2, color:'#7c5cfc', title:'Formation JS' },
+    { col:2, top:0, h:1, color:'#00d4aa', title:'Réunion' },
+    { col:4, top:2, h:1.5, color:'#f5c842', title:'Sport 🏃' },
+    { col:0, top:3, h:1, color:'#ff5f8a', title:'Déjeuner' },
+  ];
+  jours.forEach((j, ci) => {
+    const col = document.createElement('div'); col.className = 'pw-col';
+    for (let i = 0; i < 7; i++) { const s = document.createElement('div'); s.className = 'pw-slot'; col.appendChild(s); }
+    events.filter(e => e.col === ci).forEach(ev => {
+      const el = document.createElement('div'); el.className = 'pw-event';
+      el.style.cssText = `background:${ev.color}cc;top:${ev.top*48+4}px;height:${ev.h*48-8}px;`;
+      el.textContent = ev.title; col.appendChild(el);
+    });
+    wrap.appendChild(col);
+  });
+})();
+
+// ── Showcase semaine ─────────────────────────────
+(function buildShowcaseWeek() {
+  const grid = document.getElementById('showcase-week-grid');
+  if (!grid) return;
+  const jours = ['Lun 17','Mar 18','Mer 19','Jeu 20','Ven 21','Sam 22','Dim 23'];
+  // header
+  const th0 = document.createElement('div'); th0.className = 'sw-header'; th0.style.borderBottom = '1px solid var(--border)';
+  grid.appendChild(th0);
+  jours.forEach((j, i) => {
+    const th = document.createElement('div'); th.className = 'sw-day-header sw-header' + (i===2?' today':'');
+    th.textContent = j; grid.appendChild(th);
+  });
+  const evs = [
+    {col:0,top:1,h:1,color:'#ff6b35',title:'Stand-up'},
+    {col:1,top:2,h:2,color:'#7c5cfc',title:'Formation'},
+    {col:2,top:1,h:1,color:'#00d4aa',title:'Réunion'},
+    {col:4,top:3,h:1.5,color:'#f5c842',title:'Sport'},
+    {col:0,top:4,h:1,color:'#ff5f8a',title:'Déjeuner'},
+    {col:3,top:0,h:1,color:'#4299e1',title:'Planning'},
+  ];
+  for (let h = 8; h <= 14; h++) {
+    const tc = document.createElement('div'); tc.className = 'sw-time';
+    tc.textContent = h + ':00'; grid.appendChild(tc);
+    jours.forEach((j, ci) => {
+      const cell = document.createElement('div'); cell.className = 'sw-cell';
+      evs.filter(e => e.col === ci && Math.floor(e.top) === h-8).forEach(ev => {
+        const el = document.createElement('div'); el.className = 'sw-ev';
+        el.style.cssText = `background:${ev.color}cc;top:4px;height:${ev.h*48-8}px;`;
+        el.textContent = ev.title; cell.appendChild(el);
+      });
+      grid.appendChild(cell);
+    });
+  }
+})();
+
+// ── Showcase mois ────────────────────────────────
+(function buildShowcaseMonth() {
+  const grid = document.getElementById('showcase-month-grid');
+  if (!grid) return;
+  const jours = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  jours.forEach(j => {
+    const h = document.createElement('div');
+    h.style.cssText = 'background:var(--bg2);padding:10px 8px;text-align:center;font-size:.7rem;font-weight:600;color:var(--muted);letter-spacing:.06em;';
+    h.textContent = j; grid.appendChild(h);
+  });
+  const evMap = { 3:'#7c5cfc', 7:'#ff6b35', 10:'#00d4aa', 15:'#f5c842', 17:'#ff6b35', 19:'#4299e1', 22:'#ff5f8a', 25:'#7c5cfc' };
+  const evNames = { 3:'Formation', 7:'Réunion', 10:'Sport', 15:'Stand-up', 17:'Planning', 19:'Déjeuner', 22:'Projet X', 25:'Review' };
+  for (let offset = 0; offset < 5; offset++) { // 5 jours avant le 1er mars (lundi)
+    const empty = document.createElement('div');
+    empty.style.cssText = 'background:rgba(0,0,0,.3);min-height:80px;border:1px solid rgba(255,255,255,.03);';
+    grid.appendChild(empty);
+  }
+  for (let d = 1; d <= 31; d++) {
+    const cell = document.createElement('div');
+    const isToday = d === 19;
+    cell.style.cssText = `background:${isToday?'rgba(255,107,53,.05)':'var(--bg)'};min-height:80px;padding:8px;border:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .15s;`;
+    cell.onmouseenter = () => cell.style.background = 'rgba(255,107,53,.08)';
+    cell.onmouseleave = () => cell.style.background = isToday ? 'rgba(255,107,53,.05)' : 'var(--bg)';
+    const num = document.createElement('div');
+    num.style.cssText = `font-size:.75rem;font-weight:700;margin-bottom:4px;${isToday?'background:var(--accent);color:#fff;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;':'color:var(--muted);'}`;
+    num.textContent = d; cell.appendChild(num);
+    if (evMap[d]) {
+      const ev = document.createElement('div');
+      ev.style.cssText = `background:${evMap[d]}22;color:${evMap[d]};border-radius:4px;padding:2px 6px;font-size:.65rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
+      ev.textContent = evNames[d]; cell.appendChild(ev);
+    }
+    grid.appendChild(cell);
+  }
+})();
+
+// ── Showcase année ───────────────────────────────
+(function buildShowcaseYear() {
+  const grid = document.getElementById('showcase-year-grid');
+  if (!grid) return;
+  const mois = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const nbJours = [31,28,31,30,31,30,31,31,30,31,30,31];
+  mois.forEach((m, mi) => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;';
+    const h = document.createElement('div');
+    h.style.cssText = 'padding:10px 14px;font-size:.85rem;font-weight:700;border-bottom:1px solid var(--border);cursor:pointer;transition:color .2s;';
+    h.textContent = m;
+    h.onmouseenter = () => h.style.color = 'var(--accent)';
+    h.onmouseleave = () => h.style.color = '';
+    card.appendChild(h);
+    const g = document.createElement('div');
+    g.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);padding:8px;gap:2px;';
+    ['L','M','M','J','V','S','D'].forEach(d => {
+      const dn = document.createElement('div');
+      dn.style.cssText = 'font-size:.5rem;text-align:center;color:var(--muted);padding:2px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;';
+      dn.textContent = d; g.appendChild(dn);
+    });
+    const firstDay = new Date(2026, mi, 1).getDay();
+    const offset = firstDay === 0 ? 6 : firstDay - 1;
+    for (let i = 0; i < offset; i++) { const e = document.createElement('div'); g.appendChild(e); }
+    const hasEvDays = [Math.floor(Math.random()*10)+3, Math.floor(Math.random()*10)+14];
+    for (let d = 1; d <= nbJours[mi]; d++) {
+      const el = document.createElement('div');
+      const isToday = mi === 2 && d === 19;
+      const hasEv = hasEvDays.includes(d);
+      el.style.cssText = `font-size:.65rem;text-align:center;padding:3px 1px;border-radius:4px;cursor:pointer;transition:background .15s;${isToday?'background:var(--accent);color:#fff;font-weight:700;':hasEv?'color:var(--accent2);font-weight:700;':'color:var(--muted);'}`;
+      el.textContent = d; g.appendChild(el);
+    }
+    card.appendChild(g);
+    grid.appendChild(card);
+  });
+})();
+</script>
+</body>
+</html>

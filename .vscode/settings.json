@@ -1,0 +1,26 @@
+{
+    "intelephense.environment.phpVersion": "8.2.0",
+    "intelephense.files.associations": ["*.php"],
+    "intelephense.stubs": [
+        "apache", "bcmath", "calendar", "com_dotnet", "core",
+        "ctype", "curl", "date", "dba", "dom", "enchant",
+        "exif", "fileinfo", "filter", "fpm", "ftp", "gd",
+        "hash", "iconv", "imap", "intl", "json", "ldap",
+        "libxml", "mbstring", "mcrypt", "meta", "mssql",
+        "mysqli", "oci8", "odbc", "openssl", "pcntl", "pcre",
+        "PDO", "pdo_ibm", "pdo_mysql", "pdo_pgsql", "pdo_sqlite",
+        "pgsql", "Phar", "posix", "pspell", "readline", "recode",
+        "Reflection", "regex", "session", "shmop", "SimpleXML",
+        "snmp", "soap", "sockets", "sodium", "SPL", "sqlite3",
+        "standard", "superglobals", "sysvmsg", "sysvsem",
+        "sysvshm", "tidy", "tokenizer", "xml", "xmlreader",
+        "xmlrpc", "xmlwriter", "xsl", "Zend OPcache", "zip", "zlib"
+    ],
+    "php.validate.executablePath": "C:\\xampp\\php\\php.exe",
+    "php.validate.enable": true,
+    "php.suggest.basic": false,
+    "[php]": {
+        "editor.formatOnSave": false,
+        "editor.defaultFormatter": null
+    }
+}
