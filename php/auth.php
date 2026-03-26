@@ -11,8 +11,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit;
 
-
-$corps = json_decode(file_get_contents('php://input'), true) ?? [];
+$corps  = json_decode(file_get_contents('php://input'), true) ?? [];
 $action = $corps['action'] ?? '';
 
 switch ($action) {
@@ -21,7 +20,7 @@ switch ($action) {
     // Inscription
     // ──────────────────────────────────────────
     case 'inscription':
-        $nom    = nettoyerEntree($corps['nom'] ?? '');
+        $nom    = nettoyerEntree($corps['nom']    ?? '');
         $prenom = nettoyerEntree($corps['prenom'] ?? '');
         $email  = filter_var(trim($corps['email'] ?? ''), FILTER_SANITIZE_EMAIL);
         $mdp    = $corps['mot_de_passe'] ?? '';
@@ -33,7 +32,7 @@ switch ($action) {
             reponseJSON(false, null, 'Email invalide', 422);
         }
 
-        $db = getDB();
+        $db   = getDB();
         $stmt = $db->prepare('SELECT id FROM utilisateurs WHERE email = ?');
         $stmt->execute([$email]);
         if ($stmt->fetch()) {
@@ -46,12 +45,25 @@ switch ($action) {
         $id = (int) $db->lastInsertId();
 
         // Catégories par défaut
-        $cats = [['Travail','#2563eb'],['Personnel','#16a34a'],['Santé','#dc2626'],['Formation','#d97706'],['Loisirs','#7c3aed']];
+        $cats = [
+            ['Travail',   '#2563eb'],
+            ['Personnel', '#16a34a'],
+            ['Santé',     '#dc2626'],
+            ['Formation', '#d97706'],
+            ['Loisirs',   '#7c3aed'],
+        ];
         $ins = $db->prepare('INSERT INTO categories (utilisateur_id, nom, couleur) VALUES (?,?,?)');
-        foreach ($cats as [$n, $c]) $ins->execute([$id, $n, $c]);
+        foreach ($cats as [$n, $c]) {
+            $ins->execute([$id, $n, $c]);
+        }
 
         $_SESSION['utilisateur_id'] = $id;
-        reponseJSON(true, ['id' => $id, 'nom' => $nom, 'prenom' => $prenom, 'email' => $email], 'Compte créé avec succès', 201);
+        reponseJSON(true, [
+            'id'     => $id,
+            'nom'    => $nom,
+            'prenom' => $prenom,
+            'email'  => $email,
+        ], 'Compte créé avec succès', 201);
         break;
 
     // ──────────────────────────────────────────
